@@ -22,8 +22,8 @@ VIOBackEnd::VIOBackEnd(const ros::NodeHandle& node,
   basalt::VioConfig vio_config;
   vio_config.optical_flow_skip_frames = 1;
 
-  vio_config.vio_debug = get_param(node_, "debug_vio", false);
-  vio_config.vio_debug_bad_data = get_param(node_, "debug_bad_data", false);
+  vio_config.vio_debug = get_param(node_, "debug_vio", true);
+  vio_config.vio_debug_bad_data = get_param(node_, "debug_bad_data", true);
   ROS_INFO_STREAM("VIO debug: " << (vio_config.vio_debug ? " TRUE" : " FALSE"));
   ROS_INFO_STREAM("VIO debug bad data: " << (vio_config.vio_debug_bad_data));
 

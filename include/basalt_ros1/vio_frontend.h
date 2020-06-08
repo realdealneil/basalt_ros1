@@ -33,7 +33,7 @@ class VIOFrontEnd {
   }
 
   // ------ own methods
-  bool initialize();
+  bool initialize(int num_cams=2);
 
  private:
   // ------ variables --------

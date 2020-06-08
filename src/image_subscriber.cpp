@@ -9,6 +9,7 @@
 #include <boost/range/irange.hpp>
 
 #include <stdexcept>
+#include <cstdio>
 
 using boost::irange;
 
@@ -16,7 +17,7 @@ namespace basalt_ros1 {
 ImageSubscriber::ImageSubscriber(const ros::NodeHandle& node,
                                  const std::string& topic_left,
                                  const std::string& topic_right)
-    : node_(node) {
+    : node_(node), it_(node) {
   subs_.push_back(std::make_shared<message_filters::Subscriber<Image>>(
       node_, topic_left, 2));
   subs_.push_back(std::make_shared<message_filters::Subscriber<Image>>(
@@ -24,6 +25,13 @@ ImageSubscriber::ImageSubscriber(const ros::NodeHandle& node,
   sync_ = std::make_shared<message_filters::TimeSynchronizer<Image, Image>>(
       *subs_[0], *subs_[1], 10);
   sync_->registerCallback(&ImageSubscriber::callback, this);
+  lastTime_ = ros::Time::now();
+}
+
+ImageSubscriber::ImageSubscriber(const ros::NodeHandle& node, const std::string& topic_left)
+    : node_(node), it_(node)
+{
+  monocularImageSub_ = it_.subscribe(topic_left, 2, &ImageSubscriber::monocularCallback, this);
   lastTime_ = ros::Time::now();
 }
 
@@ -73,4 +81,61 @@ void ImageSubscriber::callback(ImageConstPtr const& left,
     max_q_ = std::max(queue_->size(), max_q_);
   }
 }
+
+void ImageSubscriber::monocularCallback(ImageConstPtr const& left)
+{
+  basalt::OpticalFlowInput::Ptr data(new basalt::OpticalFlowInput);
+  
+  printf("%s %d\n", __FILE__, __LINE__); fflush(stdout);
+  
+  const int NUM_CAMS = 1;
+  data->img_data.resize(NUM_CAMS);
+  data->t_ns = left->header.stamp.sec * 1000000000LL + left->header.stamp.nsec;
+  const ImageConstPtr msg[1] = {left};
+  for (const auto& i : irange(0, NUM_CAMS)) {
+    printf("%s %d\n", __FILE__, __LINE__); fflush(stdout);
+    const auto& img = *msg[i];
+    data->img_data[i].exposure =
+        0;  /// TODO: use data RS2_FRAME_METADATA_ACTUAL_EXPOSURE * 1e-6
+
+    data->img_data[i].img.reset(
+        new basalt::ManagedImage<uint16_t>(img.width, img.height));
+
+    const uint8_t* data_in = (const uint8_t*)&img.data[0];
+    uint16_t* data_out = data->img_data[i].img->ptr;
+    // TODO: this 8-bit to 16bit conversion can probably be done
+    // more efficiently with opencv
+    size_t full_size = img.width * img.height;
+    for (size_t j = 0; j < full_size; j++) {
+      int val = data_in[j];
+      val = val << 8;
+      data_out[j] = val;
+    }
+    printf("%s %d\n", __FILE__, __LINE__); fflush(stdout);
+  }
+  printf("%s %d\n", __FILE__, __LINE__); fflush(stdout);
+  
+  framesReceived_++;
+  printf("Received %lu images so far\n", framesReceived_); fflush(stdout);
+  if (framesReceived_ == 100) {
+    const auto t = ros::Time::now();
+    const auto dt = t - lastTime_;
+    ROS_INFO_STREAM("received image frame rate: " << framesReceived_ /
+                                                         dt.toSec());
+    framesReceived_ = 0;
+    lastTime_ = t;
+  }
+  printf("%s %d\n", __FILE__, __LINE__); fflush(stdout);
+  
+  if (queue_) {
+    if (!queue_->try_push(data)) {
+      ROS_WARN_STREAM("image frame " << data->t_ns
+                                     << " dropped due to queue overflow");
+    }
+    max_q_ = std::max(queue_->size(), max_q_);
+  }
+  printf("%s %d\n", __FILE__, __LINE__); fflush(stdout);
+  
+}
+
 }  // namespace basalt_ros1

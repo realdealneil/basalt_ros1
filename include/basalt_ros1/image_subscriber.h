@@ -9,6 +9,7 @@
 
 #include <message_filters/subscriber.h>
 #include <message_filters/time_synchronizer.h>
+#include <image_transport/image_transport.h>
 #include <ros/ros.h>
 #include <sensor_msgs/Image.h>
 
@@ -28,6 +29,9 @@ class ImageSubscriber {
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
   ImageSubscriber(const ros::NodeHandle& node, const std::string& topic_left,
                   const std::string& topic_right);
+                  
+  //! For monocular VIO, overloaded Constructor with single image topic:
+  ImageSubscriber(const ros::NodeHandle& node, const std::string& topic_left);
 
   ~ImageSubscriber(){};
 
@@ -36,10 +40,13 @@ class ImageSubscriber {
 
  private:
   void callback(ImageConstPtr const& left, ImageConstPtr const& right);
+  void monocularCallback(ImageConstPtr const& left);
   // ----- variables --
   ros::NodeHandle node_;
   std::shared_ptr<message_filters::TimeSynchronizer<Image, Image>> sync_;
   std::vector<std::shared_ptr<message_filters::Subscriber<Image>>> subs_;
+  image_transport::ImageTransport it_;
+  image_transport::Subscriber monocularImageSub_;
   OpticalFlowInputQueue* queue_{nullptr};
   long int max_q_{0};
   uint64_t framesReceived_{0};

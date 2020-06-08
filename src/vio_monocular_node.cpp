@@ -3,6 +3,7 @@
  */
 
 #include <basalt_ros1/utils.h>
+#include <basalt_ros1/vio_backend.h>
 #include <basalt_ros1/vio_frontend.h>
 
 #include <ros/ros.h>
@@ -10,7 +11,7 @@
 #include <string>
 
 int main(int argc, char** argv) {
-  ros::init(argc, argv, "vio_frontend_node");
+  ros::init(argc, argv, "vio_node");
   ros::NodeHandle pnh("~");
 
   try {
@@ -21,8 +22,13 @@ int main(int argc, char** argv) {
       throw std::invalid_argument("no calibration_file specified");
     }
     basalt_ros1::load_calib(&calib, calibFile);
-    basalt_ros1::VIOFrontEnd node(pnh, calib);
-    node.initialize(2);
+    basalt_ros1::VIOFrontEnd frontEnd(pnh, calib);
+    // front and backend communicate via a direct queue
+    basalt_ros1::VIOBackEnd::OpticalFlowResultQueue** q =
+        frontEnd.getOpticalFlowQueue();
+    basalt_ros1::VIOBackEnd backEnd(pnh, calib, q);
+    backEnd.start();
+    frontEnd.initialize(1);
     ros::spin();
   } catch (const std::exception& e) {
     ROS_ERROR("%s: %s", pnh.getNamespace().c_str(), e.what());

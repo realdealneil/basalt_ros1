@@ -13,9 +13,22 @@ namespace basalt_ros1 {
 VIOFrontEnd::VIOFrontEnd(const ros::NodeHandle& nh,
                          const basalt::Calibration<double>& calib)
     : node_(nh), calibration_(calib) {}
-bool VIOFrontEnd::initialize() {
-  imageSub_ =
-      std::make_shared<ImageSubscriber>(node_, "left_image", "right_image");
+bool VIOFrontEnd::initialize(int num_cams) {
+  
+  if (num_cams==2)
+  {  
+    imageSub_ =
+        std::make_shared<ImageSubscriber>(node_, "left_image", "right_image");
+  }
+  else if (num_cams==1)
+  {
+    imageSub_ = std::make_shared<ImageSubscriber>(node_, "left_image");
+  }
+  else
+  {
+    throw std::runtime_error("Invalid number of cameras...must be 1 or 2");
+  }
+  
   basalt::VioConfig vio_config;
   vio_config.optical_flow_skip_frames = 1;
   opticalFlow_ =

@@ -29,6 +29,7 @@ find_package(catkin REQUIRED COMPONENTS
   std_msgs
   nav_msgs
   sensor_msgs
+  image_transport
   tf
   basalt_vio_ros1_msgs
   basalt
@@ -120,6 +121,14 @@ add_dependencies(vio_backend_nodelet ${catkin_EXPORTED_TARGETS})
 add_executable(vio_node src/vio_node.cpp)
 target_link_libraries(vio_node basalt_ros1  ${catkin_LIBRARIES} ${TBB_LIBRARIES})
 add_dependencies(vio_node ${catkin_EXPORTED_TARGETS})
+
+# --- combined monocular frontend/backend ---
+
+add_executable(vio_monocular_node src/vio_monocular_node.cpp)
+target_link_libraries(vio_monocular_node basalt_ros1  ${catkin_LIBRARIES} ${TBB_LIBRARIES})
+add_dependencies(vio_monocular_node ${catkin_EXPORTED_TARGETS})
+
+# --- combined nodelet ---
 
 add_library(vio_nodelet src/vio_nodelet.cpp)
 target_link_libraries(vio_nodelet basalt_ros1  ${catkin_LIBRARIES} ${TBB_LIBRARIES})
